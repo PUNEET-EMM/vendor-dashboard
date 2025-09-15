@@ -18,7 +18,7 @@ const isTokenValid = (token) => {
 
 // Custom hook
 const useIsAuthenticated = () => {
-  const token = localStorage.getItem("Vendortoken");
+  const token = localStorage.getItem("vendortoken");
   return isTokenValid(token);
 };
 
@@ -27,7 +27,7 @@ export function RequireAuth() {
   const location = useLocation();
 
   if (!authed) {
-    localStorage.removeItem("token"); 
+    localStorage.removeItem("vendortoken"); 
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
@@ -38,7 +38,7 @@ export function RedirectIfAuth() {
   const authed = useIsAuthenticated();
 
   if (authed) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/vendor" replace />;
   }
 
   return <Outlet />;

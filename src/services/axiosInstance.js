@@ -15,7 +15,7 @@ axiosInstance.interceptors.request.use(
     if (config.skipAuth) {
       return config;
     }
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("vendortoken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     } else {

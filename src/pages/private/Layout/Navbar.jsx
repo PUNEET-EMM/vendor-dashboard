@@ -28,7 +28,7 @@ export default function Navbar({ logoSrc, profileSrc }) {
                 <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
 
                     <Link
-                        to="/profile"
+                        to="/vendor/profile"
                         className="flex items-center gap-2 text-sm md:text-base"
                     >
                         <img

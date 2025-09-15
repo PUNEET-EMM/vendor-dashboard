@@ -37,12 +37,30 @@ const Sidebar = () => {
         </div>
 
         {/* Orders */}
+
+
+
+
+        {/* Approvals */}
+        <div className="flex items-center gap-3 relative">
+          <Link to="/vendor/order-req">
+            <div className="relative">
+              <img src={ordericon} alt="Orders" className="w-6 h-6" />
+
+            </div>
+          </Link>
+          <Link to="/vendor/order-req" className="hover:text-blue-600">
+            Incoming Orders
+          </Link>
+        </div>
+
+
         <div className="flex items-center gap-3">
           <Link to="/vendor/orders">
             <img src={ordericon} alt="Orders" className="w-6 h-6" />
           </Link>
           <Link to="/vendor/orders" className="hover:text-blue-600">
-            Orders
+          Order History
           </Link>
         </div>
 
@@ -51,48 +69,35 @@ const Sidebar = () => {
           <Link to="/support">
             <img src={supporticon} alt="Support" className="w-6 h-6" />
           </Link>
-          <Link to="/support" className="hover:text-blue-600">
+          <Link to="/vendor/support" className="hover:text-blue-600">
             Support
           </Link>
         </div>
 
-        {/* Approvals */}
-        <div className="flex items-center gap-3 relative">
-          <Link to="/approval">
-            <div className="relative">
-              <img src={approvalicon} alt="Approval" className="w-6 h-6" />
-         
-            </div>
-          </Link>
-          <Link to="/approval" className="hover:text-blue-600">
-            Approvals
-          </Link>
-        </div>
-
         {/* Invoices */}
-        <div className="flex items-center gap-3">
+        {/* <div className="flex items-center gap-3">
           <Link to="/invoice">
             <img src={invoiceicon} alt="Invoice" className="w-6 h-6" />
           </Link>
           <Link to="/invoice" className="hover:text-blue-600">
             Invoices
           </Link>
-        </div>
+        </div> */}
 
 
-                <div className="flex items-center gap-3 relative">
-          <Link to="/approval">
+        <div className="flex items-center gap-3 relative">
+          <Link to="/vendor/catalog">
             <div className="relative">
               <img src={approvalicon} alt="Approval" className="w-6 h-6" />
             </div>
           </Link>
-          <Link to="/approval" className="hover:text-blue-600">
-                   Catalog
+          <Link to="/vendor/catalog" className="hover:text-blue-600">
+            Catalog
 
           </Link>
         </div>
 
-        
+
 
 
 

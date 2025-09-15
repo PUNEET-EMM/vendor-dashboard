@@ -8,13 +8,13 @@ export default function AppRouter() {
   return (
     <Router>
       <Routes>
-        {/* <Route element={<RedirectIfAuth />}> */}
+        <Route element={<RedirectIfAuth />}>
           <Route path="/*" element={<PublicRoutes />} />
-        {/* </Route> */}
+        </Route>
 
-        {/* <Route element={<RequireAuth />}> */}
+        <Route element={<RequireAuth />}>
           <Route path="/vendor/*" element={<PrivateRoutes />} />
-        {/* </Route> */}
+        </Route>
       </Routes>
     </Router>
   );
