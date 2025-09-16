@@ -200,7 +200,7 @@ function OrderRequestDetails({ request, onBack, onRequestUpdate }) {
                   <label className="text-sm font-medium text-gray-600">Delivery Address</label>
                   <p className="text-gray-900">{currentRequest.deliveryAddress}</p>
                 </div>
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                {/* <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-900">Request Status</p>
                     <p className="text-sm text-gray-600">Hidden: {currentRequest.hidden ? 'Yes' : 'No'}</p>
@@ -209,7 +209,7 @@ function OrderRequestDetails({ request, onBack, onRequestUpdate }) {
                     <StatusIcon className="h-4 w-4 mr-2" />
                     {currentRequest.status}
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
