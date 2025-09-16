@@ -200,16 +200,6 @@ function OrderRequestDetails({ request, onBack, onRequestUpdate }) {
                   <label className="text-sm font-medium text-gray-600">Delivery Address</label>
                   <p className="text-gray-900">{currentRequest.deliveryAddress}</p>
                 </div>
-                {/* <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">Request Status</p>
-                    <p className="text-sm text-gray-600">Hidden: {currentRequest.hidden ? 'Yes' : 'No'}</p>
-                  </div>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color}`}>
-                    <StatusIcon className="h-4 w-4 mr-2" />
-                    {currentRequest.status}
-                  </span>
-                </div> */}
               </div>
             </div>
           </div>
@@ -297,7 +287,18 @@ export default function OrderRequestManager() {
       }
     } catch (error) {
       console.error('Error fetching order requests:', error);
-      setError(error.response?.data?.message || 'Failed to fetch order requests');
+      
+      // Handle 404 case specifically for "No order request found!"
+      if (error.response?.status === 404 && 
+          (error.response?.data?.message === "No order request found!" || 
+           error.response?.data?.success === false)) {
+        // This is not an error, just no data available
+        setRequests([]);
+        setError(null);
+      } else {
+        // This is a real error
+        setError(error.response?.data?.message || 'Failed to fetch order requests');
+      }
     } finally {
       setLoading(false);
     }
@@ -353,7 +354,7 @@ export default function OrderRequestManager() {
     );
   }
 
-  // Error state
+  // Error state (only for real errors, not 404 with no data)
   if (error) {
     return (
       <Layout>
@@ -405,34 +406,6 @@ export default function OrderRequestManager() {
               </button>
             </div>
           </div>
-
-          {/* Filters */}
-          {/* <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  placeholder="Search by Request ID, Order ID, Main Order ID, or Company..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div className="sm:w-48">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {statusOptions.map(status => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div> */}
 
           {/* Order Requests List */}
           <div className="space-y-4">
@@ -522,13 +495,21 @@ export default function OrderRequestManager() {
               );
             })}
 
-            {filteredRequests.length === 0 && (
+            {/* No data found state */}
+            {filteredRequests.length === 0 && !loading && !error && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No Order Requests Found</h3>
-                <p className="text-gray-500">
-                  {statusFilter !== 'all' ? `No ${statusFilter.toLowerCase()} requests available.` : 'No order requests available at the moment.'}
+                <p className="text-gray-500 mb-4">
+                  There are currently no order requests available. New requests will appear here when they are created.
                 </p>
+                <button
+                  onClick={fetchOrderRequests}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Check for New Requests
+                </button>
               </div>
             )}
           </div>
