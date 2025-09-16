@@ -407,7 +407,7 @@ export default function OrderRequestManager() {
           </div>
 
           {/* Filters */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          {/* <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <input
@@ -432,7 +432,7 @@ export default function OrderRequestManager() {
                 </select>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Order Requests List */}
           <div className="space-y-4">
