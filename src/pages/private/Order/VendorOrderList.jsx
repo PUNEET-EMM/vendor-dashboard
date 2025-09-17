@@ -11,7 +11,9 @@ import {
   Calendar,
   RefreshCw,
   MapPin,
-  Phone
+  Phone,
+  Play,
+  AlertCircle
 } from 'lucide-react';
 import Layout from '../Layout/Layout';
 import OrderDetails from './OrderDetails';
@@ -27,16 +29,16 @@ export default function VendorOrderView() {
 
   const statusOptions = [
     { value: 'all', label: 'All Orders', color: 'bg-gray-100 text-gray-800', icon: Package },
-    { value: 'Pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-    { value: 'Accepted', label: 'Accepted', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    { value: 'Rejected', label: 'Rejected', color: 'bg-red-100 text-red-800', icon: XCircle }
+    { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+    { value: 'Started', label: 'Started', color: 'bg-purple-100 text-purple-800', icon: Play },
+    { value: 'Completed', label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle }
   ];
 
   const stats = {
     total: orders.length,
-    pending: orders.filter(o => o.status === 'Pending').length,
     accepted: orders.filter(o => o.status === 'Accepted').length,
-    rejected: orders.filter(o => o.status === 'Rejected').length
+    started: orders.filter(o => o.status === 'Started').length,
+    completed: orders.filter(o => o.status === 'Completed').length
   };
 
   useEffect(() => {
@@ -155,8 +157,6 @@ export default function VendorOrderView() {
             
           
           </div>
-
-       
 
           {/* Orders List */}
           <div className="space-y-4">
@@ -286,3 +286,4 @@ export default function VendorOrderView() {
     </Layout>
   );
 }
+

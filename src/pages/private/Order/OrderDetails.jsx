@@ -14,18 +14,25 @@ import {
   Package,
   Building2,
   Calendar,
-  Eye
+  Eye,
+  Play,
+  Square,
+  AlertCircle
 } from 'lucide-react';
 import Layout from '../Layout/Layout';
+import axiosInstance from '../../../services/axiosInstance';
 
 export default function OrderDetails({ order, onBack, onOrderUpdate }) {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(order);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpError, setOtpError] = useState('');
 
   const statusOptions = [
-    { value: 'Pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-    { value: 'Accepted', label: 'Accepted', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    { value: 'Rejected', label: 'Rejected', color: 'bg-red-100 text-red-800', icon: XCircle },
+    { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+    { value: 'Started', label: 'Started', color: 'bg-purple-100 text-purple-800', icon: Play },
+    { value: 'Completed', label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle },
   ];
 
   const getStatusConfig = (status) => {
@@ -49,14 +56,105 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
     }).format(amount);
   };
 
-  const handleStatusUpdate = async (orderId, newStatus) => {
-    // Removed - this is order history, no status changes allowed
+  const getNextStatus = (currentStatus) => {
+    const statusFlow = {
+      'Accepted': 'Started',
+      'Started': 'Completed'
+    };
+    return statusFlow[currentStatus];
+  };
+
+  const canProgressStatus = (currentStatus) => {
+    return currentStatus === 'Accepted' || currentStatus === 'Started';
+  };
+
+  const handleStatusProgress = async (targetStatus) => {
+    if (targetStatus === 'Completed') {
+      setShowOtpModal(true);
+      return;
+    }
+
+    // For Started status, proceed directly
+    await updateOrderStatus(targetStatus, '');
+  };
+
+  const updateOrderStatus = async (newStatus, otpValue = '') => {
+    setIsUpdatingStatus(true);
+    try {
+      const payload = {
+        status: newStatus
+      };
+
+      // Always include OTP in payload
+      if (newStatus === 'Completed') {
+        payload.otp = otpValue;
+      } else {
+        payload.otp = ''; // Empty OTP for Started status
+      }
+
+      const response = await axiosInstance.patch(
+        `/vendor/orders/${currentOrder._id}/progress`,
+        payload
+      );
+
+      if (response.data.success) {
+        const updatedOrder = { ...currentOrder, status: newStatus, updatedAt: new Date().toISOString() };
+        setCurrentOrder(updatedOrder);
+        
+        // Call the parent callback if provided
+        if (onOrderUpdate) {
+          onOrderUpdate(updatedOrder);
+        }
+
+        // Close OTP modal if it was open
+        setShowOtpModal(false);
+        setOtp('');
+        setOtpError('');
+
+        // Show success message (you can replace this with your toast/notification system)
+        alert(`Order status updated to ${newStatus} successfully!`);
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      
+      if (error.response?.data?.message) {
+        setOtpError(error.response.data.message);
+      } else {
+        const errorMessage = `Failed to update order status to ${newStatus}. Please try again.`;
+        setOtpError(errorMessage);
+        alert(errorMessage);
+      }
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleOtpSubmit = async () => {
+    if (!otp.trim()) {
+      setOtpError('Please enter the OTP');
+      return;
+    }
+
+    if (otp.length !== 5) {
+      setOtpError('OTP must be 5 digits');
+      return;
+    }
+
+    await updateOrderStatus('Completed', otp);
+  };
+
+  const handleOtpModalClose = () => {
+    setShowOtpModal(false);
+    setOtp('');
+    setOtpError('');
   };
 
   if (!currentOrder) return null;
 
   const statusConfig = getStatusConfig(currentOrder.status);
   const StatusIcon = statusConfig.icon;
+  const nextStatus = getNextStatus(currentOrder.status);
+  const showProgressButton = canProgressStatus(currentOrder.status);
 
   return (
     <Layout>
@@ -91,6 +189,35 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                 </div>
               </div>
             </div>
+            
+            {/* Progress Button */}
+            {showProgressButton && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleStatusProgress(nextStatus)}
+                  disabled={isUpdatingStatus}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
+                    nextStatus === 'Started' 
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                      : 'bg-green-600 hover:bg-green-700 text-white'
+                  } ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {isUpdatingStatus ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : nextStatus === 'Started' ? (
+                    <Play className="h-4 w-4" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4" />
+                  )}
+                  <span>
+                    {isUpdatingStatus 
+                      ? 'Updating...' 
+                      : `Mark as ${nextStatus}`
+                    }
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -176,13 +303,6 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                 </div>
                 <p className="text-gray-900">{formatDate(currentOrder.updatedAt)}</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Eye className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-600">Visibility</span>
-                </div>
-                <p className="text-gray-900">{currentOrder.hidden ? 'Hidden' : 'Visible'}</p>
-              </div>
             </div>
           </div>
         </div>
@@ -220,7 +340,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
         </div>
 
         {/* Services */}
-        {currentOrder.services && currentOrder.services.length > 0 && (
+        {/* {currentOrder.services && currentOrder.services.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
               <User className="h-5 w-5 mr-2" />
@@ -240,30 +360,70 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
               ))}
             </div>
           </div>
-        )}
+        )} */}
 
-        {/* Additional Information */}
-        {/* <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FileText className="h-5 w-5 mr-2" />
-            Additional Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <label className="text-sm font-medium text-gray-600">Order Version</label>
-              <p className="text-gray-900">v{currentOrder.__v || 0}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <label className="text-sm font-medium text-gray-600">Order Status</label>
-              <div className="flex items-center mt-1">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
-                  <StatusIcon className="h-3 w-3 mr-1" />
-                  {currentOrder.status}
-                </span>
+        {/* OTP Modal */}
+        {showOtpModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Complete Order</h3>
+              </div>
+              
+              <p className="text-gray-600 mb-4">
+                Please enter the 5-digit OTP to mark this order as completed.
+              </p>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter OTP
+                </label>
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 5);
+                    setOtp(value);
+                    if (otpError) setOtpError('');
+                  }}
+                  placeholder="12345"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-center text-lg tracking-widest"
+                  maxLength={5}
+                />
+                {otpError && (
+                  <div className="flex items-center space-x-1 mt-2 text-red-600 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{otpError}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleOtpModalClose}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleOtpSubmit}
+                  disabled={isUpdatingStatus || otp.length !== 5}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  {isUpdatingStatus ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <span>Complete Order</span>
+                  )}
+                </button>
               </div>
             </div>
           </div>
-        </div> */}
+        )}
       </div>
     </Layout>
   );
