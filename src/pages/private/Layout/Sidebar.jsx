@@ -85,7 +85,7 @@ const Sidebar = () => {
         </div> */}
 
 
-        <div className="flex items-center gap-3 relative">
+        {/* <div className="flex items-center gap-3 relative">
           <Link to="/vendor/catalog">
             <div className="relative">
               <img src={approvalicon} alt="Approval" className="w-6 h-6" />
@@ -95,7 +95,7 @@ const Sidebar = () => {
             Catalog
 
           </Link>
-        </div>
+        </div> */}
 
 
 
