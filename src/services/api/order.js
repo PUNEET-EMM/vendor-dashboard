@@ -63,18 +63,26 @@ export const updateOrderRequestStatusApi = async ({ requestId, status }) => {
 };
 
 
-export const updateOrderProgressApi = async ({ orderId, status, otp = '' }) => {
+export const updateOrderProgressApi = async ({ orderId, status, otp = '', serviceId }) => {
   try {
     const payload = {
       status,
-      otp
+      otp,
     };
+
+    console.log(serviceId,"check")
+
+    if (serviceId) {
+      payload.serviceId = serviceId;
+    }
+
 
     const response = await axiosInstance.patch(
       `/vendor/orders/${orderId}/progress`,
       payload
     );
 
+    console.log(response)
     if (response.data.success) {
       return response.data;
     } else {

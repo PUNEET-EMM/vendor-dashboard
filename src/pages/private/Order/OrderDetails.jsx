@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  CheckCircle, 
-  Clock, 
-  User, 
+import {
+  CheckCircle,
+  Clock,
+  User,
   RefreshCw,
   FileText,
   ArrowLeft,
@@ -21,12 +21,15 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState('');
+  const [otpModalType, setOtpModalType] = useState(''); // 'start' or 'complete'
 
   const updateProgressMutation = useUpdateOrderProgress();
 
   useEffect(() => {
     setCurrentOrder(order);
   }, [order]);
+
+  console.log(order.services[0]);
 
   const statusOptions = [
     { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
@@ -61,34 +64,58 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
     return currentStatus === 'Pending' || currentStatus === 'Accepted' || currentStatus === 'Started';
   };
 
+  // Check if the service is hourly-based
+  const isHourlyBasedService = () => {
+    return currentOrder?.services?.[0]?.isHourlyBased === true;
+  };
+
   const handleStatusProgress = async (targetStatus) => {
+    // Show OTP modal for completing any order
     if (targetStatus === 'Completed') {
+      setOtpModalType('complete');
       setShowOtpModal(true);
       return;
     }
 
+    // Show OTP modal for starting hourly-based services
+    if (targetStatus === 'Started' && isHourlyBasedService()) {
+      setOtpModalType('start');
+      setShowOtpModal(true);
+      return;
+    }
+
+    // For other status changes, proceed without OTP
     await updateOrderStatus(targetStatus, '');
   };
 
   const updateOrderStatus = async (newStatus, otpValue = '') => {
     setOtpError('');
-    
+
     try {
-      await updateProgressMutation.mutateAsync({
+      // Build base payload
+      const payload = {
         orderId: currentOrder._id,
         status: newStatus,
-        otp: otpValue
-      });
+        otp: otpValue,
+      };
+
+      // If it's a service order, add serviceId
+      if (order?.orderType?.includes("service") && order?.services?.length > 0) {
+        payload.serviceId = order.services[0]._id;
+      }
+
+      // Call mutation with payload
+      await updateProgressMutation.mutateAsync(payload);
 
       // Update local state
-      const updatedOrder = { 
-        ...currentOrder, 
-        status: newStatus, 
-        updatedAt: new Date().toISOString() 
+      const updatedOrder = {
+        ...currentOrder,
+        status: newStatus,
+        updatedAt: new Date().toISOString()
       };
-      
+
       setCurrentOrder(updatedOrder);
-      
+
       if (onOrderUpdate) {
         onOrderUpdate(updatedOrder);
       }
@@ -97,12 +124,13 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
         setShowOtpModal(false);
         setOtp('');
         setOtpError('');
+        setOtpModalType('');
       }
 
       console.log(`Order status updated to ${newStatus} successfully!`);
     } catch (error) {
       console.error('Error updating order status:', error);
-      
+
       if (error.message) {
         setOtpError(error.message);
       } else {
@@ -126,7 +154,8 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
       return;
     }
 
-    await updateOrderStatus('Completed', otp);
+    const targetStatus = otpModalType === 'start' ? 'Started' : 'Completed';
+    await updateOrderStatus(targetStatus, otp);
   };
 
   const handleOtpModalClose = () => {
@@ -134,6 +163,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
       setShowOtpModal(false);
       setOtp('');
       setOtpError('');
+      setOtpModalType('');
     }
   };
 
@@ -158,6 +188,29 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
   const showProgressButton = canProgressStatus(currentOrder.status);
   const isServiceOrder = currentOrder.orderType === 'service';
   const isUpdatingStatus = updateProgressMutation.isLoading;
+
+  // Get modal content based on type
+  const getOtpModalContent = () => {
+    if (otpModalType === 'start') {
+      return {
+        icon: <Play className="h-6 w-6 text-purple-600" />,
+        title: 'Start Service',
+        description: 'Please enter the 5-digit OTP to start this hourly-based service.',
+        buttonColor: 'bg-purple-600 hover:bg-purple-700',
+        buttonText: 'Start Service'
+      };
+    } else {
+      return {
+        icon: <CheckCircle className="h-6 w-6 text-green-600" />,
+        title: 'Complete Order',
+        description: 'Please enter the 5-digit OTP to mark this order as completed.',
+        buttonColor: 'bg-green-600 hover:bg-green-700',
+        buttonText: 'Complete Order'
+      };
+    }
+  };
+
+  const modalContent = getOtpModalContent();
 
   return (
     <Layout>
@@ -185,6 +238,13 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       {isServiceOrder ? 'Service Order' : 'Product Order'}
                     </span>
+                    {/* Show hourly-based indicator */}
+                    {isServiceOrder && isHourlyBasedService() && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <Timer className="h-3 w-3 mr-1" />
+                        Hourly-Based
+                      </span>
+                    )}
                     <span className="text-sm text-gray-500">
                       Updated: {formatDate(currentOrder.updatedAt)}
                     </span>
@@ -198,13 +258,12 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                   <button
                     onClick={() => handleStatusProgress(nextStatus)}
                     disabled={isUpdatingStatus}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
-                      nextStatus === 'Accepted' 
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${nextStatus === 'Accepted'
                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                        : nextStatus === 'Started' 
-                        ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                    } ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        : nextStatus === 'Started'
+                          ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      } ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {isUpdatingStatus ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
@@ -216,9 +275,9 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                       <CheckCircle className="h-4 w-4" />
                     )}
                     <span>
-                      {isUpdatingStatus 
-                        ? 'Updating...' 
-                        : `Mark as ${nextStatus}`
+                      {isUpdatingStatus
+                        ? 'Updating...'
+                        : `Mark as ${nextStatus}${nextStatus === 'Started' && isHourlyBasedService() ? ' (OTP Required)' : ''}`
                       }
                     </span>
                   </button>
@@ -325,7 +384,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                           {service.isHourlyBased && (
                             <div className="flex items-center text-green-600 mt-1">
                               <Timer className="h-4 w-4 mr-1" />
-                              <span>Hourly Based Service</span>
+                              <span>Hourly Based Service (OTP Required to Start)</span>
                             </div>
                           )}
                           {service.userInput && (
@@ -386,14 +445,14 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg max-w-md w-full p-6">
                 <div className="flex items-center space-x-2 mb-4">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Complete Order</h3>
+                  {modalContent.icon}
+                  <h3 className="text-lg font-semibold text-gray-900">{modalContent.title}</h3>
                 </div>
-                
+
                 <p className="text-gray-600 mb-4">
-                  Please enter the 5-digit OTP to mark this order as completed.
+                  {modalContent.description}
                 </p>
-                
+
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Enter OTP
@@ -430,7 +489,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                   <button
                     onClick={handleOtpSubmit}
                     disabled={isUpdatingStatus || otp.length !== 5}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                    className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 ${modalContent.buttonColor}`}
                   >
                     {isUpdatingStatus ? (
                       <>
@@ -438,7 +497,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                         <span>Updating...</span>
                       </>
                     ) : (
-                      <span>Complete Order</span>
+                      <span>{modalContent.buttonText}</span>
                     )}
                   </button>
                 </div>
