@@ -29,7 +29,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
     setCurrentOrder(order);
   }, [order]);
 
-  console.log(order.services[0]);
+  console.log(order.services.id);
 
   const statusOptions = [
     { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },

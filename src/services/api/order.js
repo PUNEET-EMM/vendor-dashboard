@@ -83,11 +83,12 @@ export const updateOrderProgressApi = async ({ orderId, status, otp = '', servic
     );
 
     console.log(response)
-    if (response.data.success) {
-      return response.data;
-    } else {
-      throw new Error('Failed to update order progress');
-    }
+    return response.data
+    // if (response.data.success) {
+    //   return response.data;
+    // } else {
+    //   throw new Error('Failed to update order progress');
+    // }
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to update order progress');
   }
