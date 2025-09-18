@@ -26,14 +26,14 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      console.error("Unauthorized access - Please check your credentials");
-    }
-    return Promise.reject(error);
-  }
-);
+// axiosInstance.interceptors.response.use(
+//   (response) => response,
+//   (error) => {
+//     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+//       console.error("Unauthorized access - Please check your credentials");
+//     }
+//     return Promise.reject(error);
+//   }
+// );
 
 export default axiosInstance;
