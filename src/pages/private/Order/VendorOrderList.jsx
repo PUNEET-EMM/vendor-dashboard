@@ -4,16 +4,16 @@ import {
   Eye, 
   CheckCircle, 
   XCircle,
-  Clock, 
-  User, 
-  IndianRupee,
   Building2,
   Calendar,
   RefreshCw,
   MapPin,
   Phone,
   Play,
-  AlertCircle
+  Clock,
+  Wrench,
+  Timer,
+  CalendarDays
 } from 'lucide-react';
 import Layout from '../Layout/Layout';
 import OrderDetails from './OrderDetails';
@@ -29,13 +29,13 @@ export default function VendorOrderView() {
 
   const statusOptions = [
     { value: 'all', label: 'All Orders', color: 'bg-gray-100 text-gray-800', icon: Package },
-    { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
     { value: 'Started', label: 'Started', color: 'bg-purple-100 text-purple-800', icon: Play },
     { value: 'Completed', label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle }
   ];
 
   const stats = {
     total: orders.length,
+    pending: orders.filter(o => o.status === 'Pending').length,
     accepted: orders.filter(o => o.status === 'Accepted').length,
     started: orders.filter(o => o.status === 'Started').length,
     completed: orders.filter(o => o.status === 'Completed').length
@@ -52,7 +52,7 @@ export default function VendorOrderView() {
       const response = await axiosInstance.get('/vendor/orders');
       
       if (response.data.success) {
-        setOrders(response.data.vendorOrders || []);
+        setOrders(response.data.orderRequest || response.data.vendorOrders || []);
       } else {
         setError('No orders found');
       }
@@ -149,10 +149,10 @@ export default function VendorOrderView() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">Orders History</h1>
-                <p className="text-gray-600 mt-1">View and manage your completed orders</p>
+                <h1 className="text-2xl font-bold text-gray-800">Orders Management</h1>
+                <p className="text-gray-600 mt-1">View and manage your orders</p>
               </div>
-          
+              
             </div>
             
           
@@ -175,6 +175,11 @@ export default function VendorOrderView() {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
                           <StatusIcon className="h-3 w-3 mr-1" />
                           {order.status}
+                        </span>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          order.orderType === 'service' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {order.orderType === 'service' ? 'Service Order' : 'Product Order'}
                         </span>
                         {order.hidden && (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -201,10 +206,54 @@ export default function VendorOrderView() {
                           {order.items?.length || 0} items
                         </div>
                         <div className="flex items-center text-gray-600">
+                          <Wrench className="h-4 w-4 mr-2 flex-shrink-0" />
+                          {order.services?.length || 0} services
+                        </div>
+                        <div className="flex items-center text-gray-600">
                           <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
                           {formatDate(order.createdAt)}
                         </div>
                       </div>
+
+                      {/* Services Preview */}
+                      {order.services && order.services.length > 0 && (
+                        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
+                          <div className="text-sm">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Wrench className="h-4 w-4 text-purple-600" />
+                              <strong className="text-gray-700">Services:</strong>
+                            </div>
+                            {order.services.slice(0, 2).map((service, index) => (
+                              <div key={service._id || index} className="mb-2 last:mb-0">
+                                <div className="flex flex-wrap items-center gap-4 text-gray-600">
+                                  <span className="font-medium text-purple-700">{service.name}</span>
+                                  {service.date && (
+                                    <div className="flex items-center">
+                                      <CalendarDays className="h-3 w-3 mr-1 text-purple-600" />
+                                      <span>{service.date}</span>
+                                    </div>
+                                  )}
+                                  {service.time && (
+                                    <div className="flex items-center">
+                                      <Clock className="h-3 w-3 mr-1 text-purple-600" />
+                                      <span>{service.time}</span>
+                                    </div>
+                                  )}
+                                  {service.isHourlyBased && service.userInput && (
+                                    <div className="flex items-center">
+                                      <Timer className="h-3 w-3 mr-1 text-purple-600" />
+                                      <span>{service.userInput} hr(s)</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                            {order.services.length > 2 && (
+                              <span className="text-gray-500"> and {order.services.length - 2} more services...</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Items Preview */}
                       {order.items && order.items.length > 0 && (
@@ -286,4 +335,3 @@ export default function VendorOrderView() {
     </Layout>
   );
 }
-

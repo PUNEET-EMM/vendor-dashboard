@@ -17,7 +17,10 @@ import {
   Eye,
   Play,
   Square,
-  AlertCircle
+  AlertCircle,
+  Wrench,
+  Timer,
+  CalendarDays
 } from 'lucide-react';
 import Layout from '../Layout/Layout';
 import axiosInstance from '../../../services/axiosInstance';
@@ -29,7 +32,13 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState('');
 
+  // Update currentOrder when order prop changes
+  useEffect(() => {
+    setCurrentOrder(order);
+  }, [order]);
+
   const statusOptions = [
+    { value: 'Pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
     { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
     { value: 'Started', label: 'Started', color: 'bg-purple-100 text-purple-800', icon: Play },
     { value: 'Completed', label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle },
@@ -58,6 +67,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
 
   const getNextStatus = (currentStatus) => {
     const statusFlow = {
+      'Pending': 'Accepted',
       'Accepted': 'Started',
       'Started': 'Completed'
     };
@@ -65,7 +75,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
   };
 
   const canProgressStatus = (currentStatus) => {
-    return currentStatus === 'Accepted' || currentStatus === 'Started';
+    return currentStatus === 'Pending' || currentStatus === 'Accepted' || currentStatus === 'Started';
   };
 
   const handleStatusProgress = async (targetStatus) => {
@@ -74,12 +84,14 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
       return;
     }
 
-    // For Started status, proceed directly
+    // For other statuses, proceed directly
     await updateOrderStatus(targetStatus, '');
   };
 
   const updateOrderStatus = async (newStatus, otpValue = '') => {
     setIsUpdatingStatus(true);
+    setOtpError(''); // Clear previous errors
+    
     try {
       const payload = {
         status: newStatus
@@ -89,7 +101,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
       if (newStatus === 'Completed') {
         payload.otp = otpValue;
       } else {
-        payload.otp = ''; // Empty OTP for Started status
+        payload.otp = ''; // Empty OTP for other statuses
       }
 
       const response = await axiosInstance.patch(
@@ -98,7 +110,13 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
       );
 
       if (response.data.success) {
-        const updatedOrder = { ...currentOrder, status: newStatus, updatedAt: new Date().toISOString() };
+        const updatedOrder = { 
+          ...currentOrder, 
+          status: newStatus, 
+          updatedAt: new Date().toISOString() 
+        };
+        
+        // Update local state immediately
         setCurrentOrder(updatedOrder);
         
         // Call the parent callback if provided
@@ -106,13 +124,15 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
           onOrderUpdate(updatedOrder);
         }
 
-        // Close OTP modal if it was open
-        setShowOtpModal(false);
-        setOtp('');
-        setOtpError('');
+        // Close OTP modal and reset form if it was open
+        if (showOtpModal) {
+          setShowOtpModal(false);
+          setOtp('');
+          setOtpError('');
+        }
 
         // Show success message (you can replace this with your toast/notification system)
-        alert(`Order status updated to ${newStatus} successfully!`);
+        console.log(`Order status updated to ${newStatus} successfully!`);
       }
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -122,7 +142,10 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
       } else {
         const errorMessage = `Failed to update order status to ${newStatus}. Please try again.`;
         setOtpError(errorMessage);
-        alert(errorMessage);
+        // Only show alert for non-OTP errors
+        if (!showOtpModal) {
+          alert(errorMessage);
+        }
       }
     } finally {
       setIsUpdatingStatus(false);
@@ -144,10 +167,27 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
   };
 
   const handleOtpModalClose = () => {
-    setShowOtpModal(false);
-    setOtp('');
-    setOtpError('');
+    // Only close if not currently updating
+    if (!isUpdatingStatus) {
+      setShowOtpModal(false);
+      setOtp('');
+      setOtpError('');
+    }
   };
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && showOtpModal && !isUpdatingStatus) {
+        handleOtpModalClose();
+      }
+    };
+
+    if (showOtpModal) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [showOtpModal, isUpdatingStatus]);
 
   if (!currentOrder) return null;
 
@@ -181,6 +221,11 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                   <span className="text-sm text-gray-500">
                     Updated: {formatDate(currentOrder.updatedAt)}
                   </span>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    currentOrder.orderType === 'service' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {currentOrder.orderType === 'service' ? 'Service Order' : 'Product Order'}
+                  </span>
                   {currentOrder.hidden && (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                       Hidden
@@ -197,13 +242,17 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                   onClick={() => handleStatusProgress(nextStatus)}
                   disabled={isUpdatingStatus}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
-                    nextStatus === 'Started' 
+                    nextStatus === 'Accepted' 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : nextStatus === 'Started' 
                       ? 'bg-purple-600 hover:bg-purple-700 text-white' 
                       : 'bg-green-600 hover:bg-green-700 text-white'
                   } ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {isUpdatingStatus ? (
                     <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : nextStatus === 'Accepted' ? (
+                    <CheckCircle className="h-4 w-4" />
                   ) : nextStatus === 'Started' ? (
                     <Play className="h-4 w-4" />
                   ) : (
@@ -242,12 +291,10 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                 <p className="text-gray-900">{currentOrder.vendorId}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">Status</label>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
-                  <StatusIcon className="h-3 w-3 mr-1" />
-                  {currentOrder.status}
-                </span>
+                <label className="text-sm font-medium text-gray-600">Order Type</label>
+                <p className="text-gray-900 capitalize">{currentOrder.orderType || 'N/A'}</p>
               </div>
+            
             </div>
           </div>
 
@@ -307,15 +354,79 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
           </div>
         </div>
 
-        {/* Items */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <ShoppingBag className="h-5 w-5 mr-2" />
-            Order Items ({currentOrder.items?.length || 0})
-          </h2>
-          <div className="space-y-4">
-            {currentOrder.items?.length > 0 ? (
-              currentOrder.items.map((item, index) => (
+        {/* Services Section - Show when services exist */}
+        {currentOrder.services && currentOrder.services.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Wrench className="h-5 w-5 mr-2" />
+              Services ({currentOrder.services.length})
+            </h2>
+            <div className="space-y-4">
+              {currentOrder.services.map((service, index) => (
+                <div key={service._id || index} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-200">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Wrench className="h-5 w-5 text-purple-600" />
+                        <h3 className="font-semibold text-gray-900 text-lg">{service.name}</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="flex items-center text-gray-700">
+                          <CalendarDays className="h-4 w-4 mr-2 text-purple-600" />
+                          <span className="font-medium">Date:</span>
+                          <span className="ml-1">{service.date}</span>
+                        </div>
+                        <div className="flex items-center text-gray-700">
+                          <Clock className="h-4 w-4 mr-2 text-purple-600" />
+                          <span className="font-medium">Time:</span>
+                          <span className="ml-1">{service.time}</span>
+                        </div>
+                        {service.isHourlyBased && (
+                          <div className="flex items-center text-gray-700">
+                            <Timer className="h-4 w-4 mr-2 text-purple-600" />
+                            <span className="font-medium">Duration:</span>
+                            <span className="ml-1">{service.userInput} hour(s)</span>
+                          </div>
+                        )}
+                        {service.userInput && !service.isHourlyBased && (
+                          <div className="flex items-center text-gray-700">
+                            <Package className="h-4 w-4 mr-2 text-purple-600" />
+                            <span className="font-medium">Quantity:</span>
+                            <span className="ml-1">{service.userInput}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center space-x-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          service.isHourlyBased ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                        }`}>
+                          {service.isHourlyBased ? 'Hourly Based' : 'Fixed Service'}
+                        </span>
+                        {service._id && (
+                          <span className="text-xs text-gray-500">
+                            Service ID: {service._id.slice(-6)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Items Section - Show when items exist */}
+        {currentOrder.items && currentOrder.items.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <ShoppingBag className="h-5 w-5 mr-2" />
+              Order Items ({currentOrder.items.length})
+            </h2>
+            <div className="space-y-4">
+              {currentOrder.items.map((item, index) => (
                 <div key={item._id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <h3 className="font-medium text-gray-900">{item.name}</h3>
@@ -329,38 +440,22 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                     </div>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-500 py-8">
-                <Package className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                <p>No items found in this order</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Services */}
-        {/* {currentOrder.services && currentOrder.services.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-              <User className="h-5 w-5 mr-2" />
-              Services ({currentOrder.services.length})
-            </h2>
-            <div className="space-y-4">
-              {currentOrder.services.map((service, index) => (
-                <div key={service._id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{service.name || `Service ${index + 1}`}</h3>
-                    <div className="text-sm text-gray-600 mt-1">
-                      {service.description && <span>{service.description}</span>}
-                      {service._id && <div className="text-xs text-gray-500 mt-1">ID: {service._id}</div>}
-                    </div>
-                  </div>
-                </div>
               ))}
             </div>
           </div>
-        )} */}
+        )}
+
+        {/* Empty State for Orders without Items or Services */}
+        {(!currentOrder.items || currentOrder.items.length === 0) && 
+         (!currentOrder.services || currentOrder.services.length === 0) && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="text-center text-gray-500 py-8">
+              <Package className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Items or Services</h3>
+              <p>This order doesn't contain any items or services.</p>
+            </div>
+          </div>
+        )}
 
         {/* OTP Modal */}
         {showOtpModal && (
@@ -390,6 +485,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                   placeholder="12345"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-center text-lg tracking-widest"
                   maxLength={5}
+                  disabled={isUpdatingStatus}
                 />
                 {otpError && (
                   <div className="flex items-center space-x-1 mt-2 text-red-600 text-sm">
@@ -402,7 +498,8 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
               <div className="flex space-x-3">
                 <button
                   onClick={handleOtpModalClose}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={isUpdatingStatus}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
