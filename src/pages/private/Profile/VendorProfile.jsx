@@ -132,7 +132,9 @@ const VendorProfile = () => {
                       <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h2zm6-1a1 1 0 00-1-1h-2a1 1 0 00-1 1v1h4V5zM6 8v6h8V8H6z" clipRule="evenodd" />
                       </svg>
-                      {vendorData.category}
+                      {vendorData.categories && vendorData.categories.length > 0 
+                        ? vendorData.categories.join(', ') 
+                        : 'No categories specified'}
                     </div>
                     <div className="flex items-center">
                       <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -182,12 +184,40 @@ const VendorProfile = () => {
                     <p className="text-gray-900 font-semibold">{formatCurrency(vendorData.lastYearTurnover)}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Category</label>
-                    <p className="text-gray-900">{vendorData.category}</p>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Categories</label>
+                    <div className="text-gray-900">
+                      {vendorData.categories && vendorData.categories.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {vendorData.categories.map((category, index) => (
+                            <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm">
+                              {category}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">No categories specified</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Sub Categories</label>
+                    <div className="text-gray-900">
+                      {vendorData.subCategories && vendorData.subCategories.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {vendorData.subCategories.map((subCategory, index) => (
+                            <span key={index} className="bg-green-100 text-green-800 px-2 py-1 rounded-md text-sm">
+                              {subCategory}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">No sub-categories specified</span>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-500 mb-1">Experience</label>
-                    <p className="text-gray-900">{vendorData.experience}</p>
+                    <p className="text-gray-900">{vendorData.experience} years</p>
                   </div>
                 </div>
               </div>
