@@ -12,8 +12,8 @@ export const useOrderRequests = () => {
       console.error("Failed to fetch order requests:", error.message);
     },
     retry: 2,
-    staleTime: 1000 * 60 * 5, 
-    cacheTime: 1000 * 60 * 10, 
+    staleTime: 1000 * 60 * 5,
+    cacheTime: 1000 * 60 * 10,
   });
 };
 
@@ -29,15 +29,15 @@ export const useVendorOrders = () => {
       console.error("Failed to fetch vendor orders:", error.message);
     },
     retry: 2,
-    staleTime: 1000 * 60 * 5, 
-    cacheTime: 1000 * 60 * 10, 
+    staleTime: 1000 * 60 * 5,
+    cacheTime: 1000 * 60 * 10,
   });
 };
 
 
 export const useUpdateOrderProgress = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: updateOrderProgressApi,
     onSuccess: (data, variables) => {
@@ -53,9 +53,13 @@ export const useUpdateOrderProgress = () => {
 
 
 export const useUpdateOrderRequestStatus = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: updateOrderRequestStatusApi,
     onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['vendorOrders'] });
+
       console.log(`Order request status updated successfully to: ${variables.status}`);
     },
     onError: (error, variables) => {

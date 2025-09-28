@@ -13,6 +13,7 @@ import {
   Wrench,
   Timer,
   Truck,
+  Loader2,
 } from 'lucide-react';
 import Layout from '../Layout/Layout';
 import { useUpdateOrderProgress } from '../../../hooks/order';
@@ -241,6 +242,18 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 p-4">
+        {/* Full-screen loading overlay when updating status */}
+        {isUpdatingStatus && !showOtpModal && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 shadow-xl flex items-center space-x-3">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <span className="text-lg font-medium text-gray-800">
+                Updating order status...
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-6">
           {/* Header */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
@@ -248,7 +261,8 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
               <div className="flex items-center space-x-4">
                 <button
                   onClick={onBack}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  disabled={isUpdatingStatus}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ArrowLeft className="h-5 w-5 text-gray-600" />
                 </button>
@@ -257,9 +271,13 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                     {isServiceOrder ? 'Service' : 'Product'} Order Details
                   </h1>
                   <div className="flex items-center space-x-2 mt-1">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
-                      <StatusIcon className="h-3 w-3 mr-1" />
-                      {statusConfig.label}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color} ${isUpdatingStatus ? 'animate-pulse' : ''}`}>
+                      {isUpdatingStatus ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <StatusIcon className="h-3 w-3 mr-1" />
+                      )}
+                      {isUpdatingStatus ? 'Updating...' : statusConfig.label}
                     </span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       {isServiceOrder ? 'Service Order' : 'Product Order'}
@@ -294,7 +312,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                       } ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {isUpdatingStatus ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : nextStatus === 'Accepted' ? (
                       <CheckCircle className="h-4 w-4" />
                     ) : nextStatus === 'Started' ? (
@@ -319,6 +337,16 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                 <div className="flex items-center space-x-2 text-red-800">
                   <AlertCircle className="h-4 w-4" />
                   <span className="text-sm">{updateProgressMutation.error.message}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Show success message when update is complete */}
+            {updateProgressMutation.isSuccess && !isUpdatingStatus && (
+              <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center space-x-2 text-green-800">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="text-sm">Order status updated successfully!</span>
                 </div>
               </div>
             )}
@@ -471,7 +499,17 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
           {/* OTP Modal */}
           {showOtpModal && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="bg-white rounded-lg max-w-md w-full p-6 relative">
+                {/* Loading overlay for OTP modal */}
+                {isUpdatingStatus && (
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                      <span className="text-gray-700 font-medium">Processing...</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center space-x-2 mb-4">
                   {modalContent.icon}
                   <h3 className="text-lg font-semibold text-gray-900">{modalContent.title}</h3>
@@ -521,8 +559,8 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                   >
                     {isUpdatingStatus ? (
                       <>
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                        <span>Updating...</span>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Processing...</span>
                       </>
                     ) : (
                       <span>{modalContent.buttonText}</span>

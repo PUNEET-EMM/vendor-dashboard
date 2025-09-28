@@ -15,7 +15,8 @@ import {
   Timer,
   CalendarDays,
   FileText,
-  Hash
+  Hash,
+  Truck
 } from 'lucide-react';
 import Layout from '../Layout/Layout';
 import OrderDetails from './OrderDetails';
@@ -32,14 +33,27 @@ export default function VendorOrderView() {
     isRefetching
   } = useVendorOrders();
   
+  // Dynamic status options based on order type
+  const getStatusOptions = (isServiceOrder) => {
+    if (isServiceOrder) {
+      return [
+        { value: 'all', label: 'All Orders', color: 'bg-gray-100 text-gray-800', icon: Hash },
+        { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+        { value: 'Started', label: 'Started', color: 'bg-purple-100 text-purple-800', icon: Play },
+        { value: 'Completed', label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+      ];
+    } else {
+      return [
+        { value: 'all', label: 'All Orders', color: 'bg-gray-100 text-gray-800', icon: Hash },
+        { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+        { value: 'Started', label: 'Out for Delivery', color: 'bg-purple-100 text-purple-800', icon: Truck },
+        { value: 'Completed', label: 'Delivered', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+      ];
+    }
+  };
 
-  const statusOptions = [
-    { value: 'all', label: 'All Orders', color: 'bg-gray-100 text-gray-800', icon: Hash },
-    { value: 'Started', label: 'Started', color: 'bg-purple-100 text-purple-800', icon: Play },
-    { value: 'Completed', label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle }
-  ];
-
-  const getStatusConfig = (status) => {
+  const getStatusConfig = (status, isServiceOrder) => {
+    const statusOptions = getStatusOptions(isServiceOrder);
     return statusOptions.find(option => option.value === status) || statusOptions[1];
   };
 
@@ -137,9 +151,9 @@ export default function VendorOrderView() {
           {/* Orders List */}
           <div className="space-y-4">
             {orders.map((order) => {
-              const statusConfig = getStatusConfig(order.status);
-              const StatusIcon = statusConfig.icon;
               const isServiceOrder = order.orderType === 'service';
+              const statusConfig = getStatusConfig(order.status, isServiceOrder);
+              const StatusIcon = statusConfig.icon;
               const totalItems = order.items?.length || 0;
               const totalServices = order.services?.length || 0;
               const firstItem = order.items?.[0];
@@ -155,7 +169,7 @@ export default function VendorOrderView() {
                         </h3>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
                           <StatusIcon className="h-3 w-3 mr-1" />
-                          {order.status}
+                          {statusConfig.label}
                         </span>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           isServiceOrder ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'

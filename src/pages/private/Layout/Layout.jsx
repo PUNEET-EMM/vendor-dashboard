@@ -46,7 +46,7 @@ const Layout = ({ children }) => {
         {/* Main Content - Scrollable within the remaining height */}
         <main className="flex-1 bg-white overflow-hidden flex flex-col lg:ml-0">
           <div className="flex-1 overflow-y-auto">
-            <div className="p-6">{children}</div>
+            <div className="">{children}</div>
           </div>
         </main>
       </div>
