@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Wrench,
   Timer,
+  Truck,
 } from 'lucide-react';
 import Layout from '../Layout/Layout';
 import { useUpdateOrderProgress } from '../../../hooks/order';
@@ -31,11 +32,26 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
 
   console.log(order.services.id);
 
-  const statusOptions = [
-    { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
-    { value: 'Started', label: 'Started', color: 'bg-purple-100 text-purple-800', icon: Play },
-    { value: 'Completed', label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  ];
+  const isServiceOrder = currentOrder.orderType === 'service';
+
+  // Dynamic status options based on order type
+  const getStatusOptions = () => {
+    if (isServiceOrder) {
+      return [
+        { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+        { value: 'Started', label: 'Started', color: 'bg-purple-100 text-purple-800', icon: Play },
+        { value: 'Completed', label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+      ];
+    } else {
+      return [
+        { value: 'Accepted', label: 'Accepted', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+        { value: 'Started', label: 'Out for Delivery', color: 'bg-purple-100 text-purple-800', icon: Truck },
+        { value: 'Completed', label: 'Delivered', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+      ];
+    }
+  };
+
+  const statusOptions = getStatusOptions();
 
   const getStatusConfig = (status) => {
     return statusOptions.find(option => option.value === status) || statusOptions[0];
@@ -60,6 +76,14 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
     return statusFlow[currentStatus];
   };
 
+  const getNextStatusLabel = (currentStatus) => {
+    const nextStatus = getNextStatus(currentStatus);
+    if (!nextStatus) return null;
+    
+    const statusConfig = getStatusConfig(nextStatus);
+    return statusConfig.label;
+  };
+
   const canProgressStatus = (currentStatus) => {
     return currentStatus === 'Pending' || currentStatus === 'Accepted' || currentStatus === 'Started';
   };
@@ -77,8 +101,8 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
       return;
     }
 
-    // Show OTP modal for starting hourly-based services
-    if (targetStatus === 'Started' && isHourlyBasedService()) {
+    // Show OTP modal for starting hourly-based services only
+    if (targetStatus === 'Started' && isServiceOrder && isHourlyBasedService()) {
       setOtpModalType('start');
       setShowOtpModal(true);
       return;
@@ -185,8 +209,8 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
   const statusConfig = getStatusConfig(currentOrder.status);
   const StatusIcon = statusConfig.icon;
   const nextStatus = getNextStatus(currentOrder.status);
+  const nextStatusLabel = getNextStatusLabel(currentOrder.status);
   const showProgressButton = canProgressStatus(currentOrder.status);
-  const isServiceOrder = currentOrder.orderType === 'service';
   const isUpdatingStatus = updateProgressMutation.isLoading;
 
   // Get modal content based on type
@@ -202,10 +226,12 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
     } else {
       return {
         icon: <CheckCircle className="h-6 w-6 text-green-600" />,
-        title: 'Complete Order',
-        description: 'Please enter the 5-digit OTP to mark this order as completed.',
+        title: isServiceOrder ? 'Complete Service' : 'Confirm Delivery',
+        description: isServiceOrder 
+          ? 'Please enter the 5-digit OTP to mark this service as completed.'
+          : 'Please enter the 5-digit OTP to confirm delivery of this order.',
         buttonColor: 'bg-green-600 hover:bg-green-700',
-        buttonText: 'Complete Order'
+        buttonText: isServiceOrder ? 'Complete Service' : 'Confirm Delivery'
       };
     }
   };
@@ -233,7 +259,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                   <div className="flex items-center space-x-2 mt-1">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
                       <StatusIcon className="h-3 w-3 mr-1" />
-                      {currentOrder.status}
+                      {statusConfig.label}
                     </span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       {isServiceOrder ? 'Service Order' : 'Product Order'}
@@ -253,7 +279,7 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
               </div>
 
               {/* Progress Button */}
-              {showProgressButton && (
+              {showProgressButton && nextStatusLabel && (
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleStatusProgress(nextStatus)}
@@ -261,7 +287,9 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                     className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${nextStatus === 'Accepted'
                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
                         : nextStatus === 'Started'
-                          ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                          ? isServiceOrder 
+                            ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                            : 'bg-orange-600 hover:bg-orange-700 text-white'
                           : 'bg-green-600 hover:bg-green-700 text-white'
                       } ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
@@ -270,14 +298,14 @@ export default function OrderDetails({ order, onBack, onOrderUpdate }) {
                     ) : nextStatus === 'Accepted' ? (
                       <CheckCircle className="h-4 w-4" />
                     ) : nextStatus === 'Started' ? (
-                      <Play className="h-4 w-4" />
+                      isServiceOrder ? <Play className="h-4 w-4" /> : <Truck className="h-4 w-4" />
                     ) : (
                       <CheckCircle className="h-4 w-4" />
                     )}
                     <span>
                       {isUpdatingStatus
                         ? 'Updating...'
-                        : `Mark as ${nextStatus}${nextStatus === 'Started' && isHourlyBasedService() ? ' (OTP Required)' : ''}`
+                        : `Mark as ${nextStatusLabel}${nextStatus === 'Started' && isServiceOrder && isHourlyBasedService() ? ' (OTP Required)' : nextStatus === 'Completed' ? ' (OTP Required)' : ''}`
                       }
                     </span>
                   </button>

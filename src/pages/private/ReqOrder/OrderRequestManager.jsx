@@ -17,11 +17,14 @@ import {
 } from 'lucide-react';
 import Layout from '../Layout/Layout';
 import OrderRequestDetails from './OrderRequestDetails';
-import { useOrderRequests } from '../../../hooks/order';
+import { useOrderRequests, useUpdateOrderRequestStatus } from '../../../hooks/order';
+import { toast } from 'react-toastify';
 
 export default function OrderRequestManager() {
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [loadingStates, setLoadingStates] = useState({}); // Track loading state for each request
   const { data: requests = [], isLoading: loading, error, refetch } = useOrderRequests();
+  const updateStatusMutation = useUpdateOrderRequestStatus();
 
   const statusOptions = [
     { value: 'all', label: 'All Requests', color: 'bg-gray-100 text-gray-800', icon: Hash },
@@ -42,6 +45,33 @@ export default function OrderRequestManager() {
     });
   };
 
+  const handleStatusUpdate = async (requestId, newStatus) => {
+    try {
+      // Set loading state for this specific request
+      setLoadingStates(prev => ({ ...prev, [requestId]: newStatus }));
+      
+      await updateStatusMutation.mutateAsync({
+        requestId,
+        status: newStatus
+      });
+
+      toast.success(`Order request ${newStatus.toLowerCase()} successfully!`);
+      
+      // Refetch the data to get updated list
+      await refetch();
+      
+    } catch (error) {
+      toast.error(`Failed to ${newStatus.toLowerCase()} request`);
+    } finally {
+      // Clear loading state for this request
+      setLoadingStates(prev => {
+        const newState = { ...prev };
+        delete newState[requestId];
+        return newState;
+      });
+    }
+  };
+
   const handleViewRequest = (request) => {
     setSelectedRequest(request);
   };
@@ -52,9 +82,7 @@ export default function OrderRequestManager() {
   };
 
   const handleRequestUpdate = (updatedRequest) => {
- 
     setSelectedRequest(updatedRequest);
-    // refetch(); 
   };
 
   const handleRefresh = () => {
@@ -136,6 +164,7 @@ export default function OrderRequestManager() {
               const totalServices = request.services?.length || 0;
               const firstItem = request.items?.[0];
               const firstService = request.services?.[0];
+              const currentLoading = loadingStates[request._id];
 
               return (
                 <div key={request._id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
@@ -207,7 +236,7 @@ export default function OrderRequestManager() {
 
                       {/* Service Preview */}
                       {isServiceOrder && firstService && (
-                        <div className="  p-3">
+                        <div className="p-3">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <p className="font-medium text-gray-900 flex items-center">
@@ -257,6 +286,40 @@ export default function OrderRequestManager() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-2">
+                      {/* Action buttons based on status */}
+                      {request.status === 'Pending' && (
+                        <>
+                          <button
+                            onClick={() => handleStatusUpdate(request._id, 'Accepted')}
+                            disabled={!!currentLoading}
+                            className="flex items-center justify-center px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors min-w-[100px]"
+                          >
+                            {currentLoading === 'Accepted' ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Accept
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleStatusUpdate(request._id, 'Rejected')}
+                            disabled={!!currentLoading}
+                            className="flex items-center justify-center px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors min-w-[100px]"
+                          >
+                            {currentLoading === 'Rejected' ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Reject
+                              </>
+                            )}
+                          </button>
+                        </>
+                      )}
+                      
                       <button
                         onClick={() => handleViewRequest(request)}
                         className="flex items-center justify-center px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"

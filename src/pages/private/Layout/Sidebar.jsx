@@ -1,3 +1,4 @@
+
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   User,
@@ -8,10 +9,17 @@ import {
   Building2,
   TrendingUp
 } from "lucide-react";
+import { useOrderRequests } from "../../../hooks/order"; // Adjust path as needed
 
 const Sidebar = ({ isSidebarOpen, closeSidebar }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Get order requests data for notifications
+  const { data: requests = [] } = useOrderRequests();
+  
+  // Count pending requests for notification
+  const pendingRequestsCount = requests.filter(request => request.status === 'Pending').length;
 
   const handleLogout = () => {
     localStorage.clear();
@@ -29,17 +37,23 @@ const Sidebar = ({ isSidebarOpen, closeSidebar }) => {
     {
       path: "/partner/profile",
       icon: User,
-      label: "My Profile"
+      label: "My Profile",
+      hasNotification: false,
+      notificationCount: 0
     },
     {
       path: "/partner/orders",
       icon: ShoppingCart,
-      label: "Ongoing Order"
+      label: "Ongoing Order",
+      hasNotification: false,
+      notificationCount: 0
     },
     {
       path: "/partner/order-req",
       icon: Building2,
-      label: "Incoming Orders"
+      label: "Incoming Orders",
+      hasNotification: pendingRequestsCount > 0,
+      notificationCount: pendingRequestsCount > 99 ? '99+' : pendingRequestsCount
     },
     // {
     //   path: "/partner/analytics",
@@ -99,12 +113,19 @@ const Sidebar = ({ isSidebarOpen, closeSidebar }) => {
                 <div className="relative">
                   <Icon className="w-5 h-5" />
                   {item.hasNotification && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-md">
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold min-w-[16px] h-4 flex items-center justify-center rounded-full shadow-md px-1">
                       {item.notificationCount}
                     </span>
                   )}
                 </div>
                 <span className="font-medium text-sm">{item.label}</span>
+                
+                {/* Optional: Add a pulsing dot for active notifications */}
+                {item.hasNotification && (
+                  <div className="ml-auto">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  </div>
+                )}
               </Link>
             );
           })}
