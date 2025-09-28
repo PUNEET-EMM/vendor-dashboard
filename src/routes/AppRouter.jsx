@@ -13,7 +13,7 @@ export default function AppRouter() {
         </Route>
 
         <Route element={<RequireAuth />}>
-          <Route path="/vendor/*" element={<PrivateRoutes />} />
+          <Route path="/partner/*" element={<PrivateRoutes />} />
         </Route>
       </Routes>
     </Router>

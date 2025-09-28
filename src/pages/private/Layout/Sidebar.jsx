@@ -1,122 +1,129 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import {
+  User,
+  ShoppingCart,
+  HelpCircle,
+  FileText,
+  LogOut,
+  Building2,
+  TrendingUp
+} from "lucide-react";
 
-import profileicon from "../../../assets/profileicon.png";
-import ordericon from "../../../assets/ordericon.png";
-import supporticon from "../../../assets/supporticon.png";
-import approvalicon from "../../../assets/approvalicon.png";
-import invoiceicon from "../../../assets/invoiceicon.png";
-import logouticon from "../../../assets/logouticon.png";
-import { useState } from "react";
-
-
-const Sidebar = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-
+const Sidebar = ({ isSidebarOpen, closeSidebar }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     localStorage.clear();
     navigate("/login");
   };
+
+  const handleLinkClick = () => {
+    // Close sidebar on mobile when a link is clicked
+    if (window.innerWidth < 1024) {
+      closeSidebar();
+    }
+  };
+
+  const menuItems = [
+    {
+      path: "/partner/profile",
+      icon: User,
+      label: "My Profile"
+    },
+    {
+      path: "/partner/orders",
+      icon: ShoppingCart,
+      label: "Ongoing Order"
+    },
+    {
+      path: "/partner/order-req",
+      icon: Building2,
+      label: "Incoming Orders"
+    },
+    // {
+    //   path: "/partner/analytics",
+    //   icon: TrendingUp,
+    //   label: "Analytics"
+    // },
+    // {
+    //   path: "/partner/invoices",
+    //   icon: FileText,
+    //   label: "Invoices"
+    // },
+    // {
+    //   path: "/partner/support",
+    //   icon: HelpCircle,
+    //   label: "Support"
+    // }
+  ];
+
+  const isActivePath = (path) => {
+    return location.pathname === path;
+  };
+
   return (
-    <aside className={` fixed top-[86px] left-0 bottom-0 w-64 bg-white shadow-lg z-40 overflow-y-auto
-                        transform transition-transform duration-300 ease-in-out
-                        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-                      `}>
+    <aside
+      className={`
+        fixed top-16 md:top-20 left-0 z-40 w-80 bg-white shadow-xl border-r border-gray-200
+        transform transition-transform duration-300 ease-in-out overflow-y-auto
+        h-[calc(100vh-64px)] md:h-[calc(100vh-80px)]
+        lg:relative lg:top-0 lg:translate-x-0 lg:shadow-none lg:border-r lg:z-0 lg:w-72
+        lg:sticky lg:self-start
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}
+      aria-label="Navigation sidebar"
+    >
+      {/* Sidebar Content */}
+      <div className="p-4 lg:p-6">
+        {/* Navigation Menu */}
+        <nav className="space-y-2">
+          {/* Menu Items */}
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = isActivePath(item.path);
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={handleLinkClick}
+                className={`
+                  flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 relative
+                  ${isActive
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 border'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
+                  }
+                `}
+              >
+                <div className="relative">
+                  <Icon className="w-5 h-5" />
+                  {item.hasNotification && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-md">
+                      {item.notificationCount}
+                    </span>
+                  )}
+                </div>
+                <span className="font-medium text-sm">{item.label}</span>
+              </Link>
+            );
+          })}
 
-      <nav className="flex flex-col p-6 space-y-6 text-sm font-poppins text-gray-900">
-        {/* Profile */}
-        <div className="flex items-center gap-3">
-          <Link to="/vendor/profile">
-            <img src={profileicon} alt="Profile" className="w-6 h-6" />
-          </Link>
-          <Link to="/vendor/profile" className="hover:text-blue-600">
-            My Profile
-          </Link>
-        </div>
+          {/* Divider */}
+          <div className="border-t border-gray-200 my-4"></div>
 
-        {/* Orders */}
-
-
-
-
-        {/* Approvals */}
-        <div className="flex items-center gap-3 relative">
-          <Link to="/vendor/order-req">
-            <div className="relative">
-              <img src={ordericon} alt="Orders" className="w-6 h-6" />
-
-            </div>
-          </Link>
-          <Link to="/vendor/order-req" className="hover:text-blue-600">
-            Incoming Orders
-          </Link>
-        </div>
-
-
-        <div className="flex items-center gap-3">
-          <Link to="/vendor/orders">
-            <img src={ordericon} alt="Orders" className="w-6 h-6" />
-          </Link>
-          <Link to="/vendor/orders" className="hover:text-blue-600">
-          Order History
-          </Link>
-        </div>
-
-
-        <div className="flex items-center gap-3">
-          <Link to="/support">
-            <img src={supporticon} alt="Support" className="w-6 h-6" />
-          </Link>
-          <Link to="/vendor/support" className="hover:text-blue-600">
-            Support
-          </Link>
-        </div>
-
-        {/* Invoices */}
-        {/* <div className="flex items-center gap-3">
-          <Link to="/invoice">
-            <img src={invoiceicon} alt="Invoice" className="w-6 h-6" />
-          </Link>
-          <Link to="/invoice" className="hover:text-blue-600">
-            Invoices
-          </Link>
-        </div> */}
-
-
-        {/* <div className="flex items-center gap-3 relative">
-          <Link to="/vendor/catalog">
-            <div className="relative">
-              <img src={approvalicon} alt="Approval" className="w-6 h-6" />
-            </div>
-          </Link>
-          <Link to="/vendor/catalog" className="hover:text-blue-600">
-            Catalog
-
-          </Link>
-        </div> */}
-
-
-
-
-
-        {/* Logout */}
-        <div className="flex items-center gap-3 ml-1">
-          <div
+          {/* Logout */}
+          <button
             onClick={handleLogout}
-            className="flex items-center gap-3 mr-2 cursor-pointer text-red-600 hover:text-red-800"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
           >
-            <img src={logouticon} alt="Logout" className="w-5 h-5" />
-            <span>Log out</span>
-          </div>
-        </div>
-
-      </nav>
+            <LogOut className="w-5 h-5" />
+            <span className="font-medium text-sm">Log out</span>
+          </button>
+        </nav>
+      </div>
     </aside>
+  );
+};
 
-
-  )
-}
-
-export default Sidebar
+export default Sidebar;

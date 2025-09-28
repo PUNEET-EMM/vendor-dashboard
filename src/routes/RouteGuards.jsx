@@ -38,7 +38,7 @@ export function RedirectIfAuth() {
   const authed = useIsAuthenticated();
 
   if (authed) {
-    return <Navigate to="/vendor/profile" replace />;
+    return <Navigate to="/partner/profile" replace />;
   }
 
   return <Outlet />;
