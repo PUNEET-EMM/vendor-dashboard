@@ -15,7 +15,7 @@ const Login = () => {
     e.preventDefault();
     try {
       await loginMutation.mutateAsync({ email, password });
-      navigate('/vendor/profile',{ replace: true });
+      navigate('/partner/profile',{ replace: true });
     } catch (error) {
       
     }
