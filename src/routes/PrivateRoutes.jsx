@@ -14,7 +14,7 @@ export default function PrivateRoutes() {
   return (
     <Routes>
 
-      <Route index element={<Navigate to="vendor" replace />} />
+      <Route index element={<Navigate to="profile" replace />} />
 
 
       <Route path="/profile" element={<PartnerProfile />} />
